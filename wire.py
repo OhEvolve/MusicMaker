@@ -38,15 +38,19 @@ try:
         outdata[:] = indata
 
     print args
+    print args.input_device
+    print args.output_device
     print type(args)
 
     with sd.Stream(device=(args.input_device, args.output_device),
                    samplerate=args.samplerate, blocksize=args.blocksize,
                    dtype=args.dtype, latency=args.latency,
                    channels=args.channels, callback=callback):
+
         print('#' * 80)
         print('press Return to quit')
         print('#' * 80)
+
         input()
 except KeyboardInterrupt:
     parser.exit('\nInterrupted by user')

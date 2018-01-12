@@ -1,23 +1,66 @@
 
 # standard libraries
 import termios, fcntl, sys, os
+import argparse
+import logging
 
 # nonstandard libraries
 import pygame
+import sounddevice as sd
 
 # library modifications
 pygame.init()
 
+
+############################
+# -- Command Line Catch -- #
+############################
+
+# outsourced to internal function
+
+############################
 # --- Internal Methods --- #
+############################
 
 def get_input():
     """ Returns character string of most recent input """
     return repr(sys.stdin.read()).strip("'")
 
+def int_or_str(text):
+    """Helper function for argument parsing."""
+    try:
+        return int(text)
+    except ValueError:
+        return text
+
+def callback(indata, outdata, frames, time, status):
+    if status:
+        print(status)
+    outdata[:] = indata
+
+def get_args():
+    """ Capture command line arguments """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-i', '--input-device', type=int_or_str,
+                        help='input device ID or substring')
+    parser.add_argument('-o', '--output-device', type=int_or_str,
+                        help='output device ID or substring')
+    parser.add_argument('-c', '--channels', type=int, default=2,
+                        help='number of channels')
+    parser.add_argument('-t', '--dtype', help='audio data type')
+    parser.add_argument('-s', '--samplerate', type=float, help='sampling rate')
+    parser.add_argument('-b', '--blocksize', type=int, help='block size')
+    parser.add_argument('-l', '--latency', type=float, help='latency in seconds')
+    return parser.parse_args()
+
+############################
+# ---       Main       --- #
+############################
+
 # Main testing function
 class Main():
 
-    def __init__(self):
+    def __init__(self,args):
 
         # some backend hooks
         fd = sys.stdin.fileno()
@@ -33,17 +76,21 @@ class Main():
 
             self.exit = False # initialize exit
 
+            # Start streaming device
+            with sd.Stream(device=(args.input_device, args.output_device),
+                           samplerate=args.samplerate, blocksize=args.blocksize,
+                           dtype=args.dtype, latency=args.latency,
+                           channels=args.channels, callback=callback):
 
+                while not self.exit:
 
-            while not self.exit:
+                    try:
+                        # process inputs
+                        c = get_input()
+                        self.interpret(c)
 
-                try:
-                    # process inputs
-                    c = get_input()
-                    self.interpret(c)
-
-                except IOError: 
-                    pass
+                    except IOError: 
+                        pass
 
         finally:
             # closing backend safely
@@ -52,15 +99,17 @@ class Main():
 
     def interpret(self,val):
         """ Interprets user protocols """
-        print type(val)
         if val == 'q':
             print 'Exiting...'
             self.exit = True
+        elif val == '\x1b[D':
+            print 'Left'
         else:
             print "Got character <{}>".format(val)
 
 
 if __name__ == "__main__":
-    main = Main()
+    args = get_args()
+    main = Main(args)
 
 

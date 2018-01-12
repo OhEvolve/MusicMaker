@@ -4,8 +4,10 @@
 Matplotlib and NumPy have to be installed.
 
 """
+from __future__ import print_function
+
 import argparse
-import queue
+import Queue as queue
 import sys
 
 
