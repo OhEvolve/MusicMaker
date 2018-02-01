@@ -87,7 +87,8 @@ class Main():
                            #dtype=args.dtype, latency=args.latency,
                            #channels=args.channels, callback=callback) as stream:
 
-                self.samplerate = 44100 #stream.samplerate    
+                self.samplerate = 2*44100 #stream.samplerate    
+                #self.samplerate = 48000 #stream.samplerate    
                 self.channels = 1 #stream.channels
 
                 while not self.exit:
@@ -115,7 +116,7 @@ class Main():
         elif val == ' ':
 
             if self.active_recording == False:
-                print 'Starting loop:'
+                print 'Recording loop:'
                 self.active_recording= True
                 sd.stop()
                 self.recording = sd.rec(int(self.max_duration * self.samplerate), 
@@ -125,14 +126,32 @@ class Main():
             elif self.active_recording == True:
                 print 'Playing loop:'
                 self.active_recording = False 
-                print self.recording.shape
                 self.recording = np.trim_zeros(self.recording)
+
+                # static filter
+
+                def f(x):
+                    return abs(x)
+
+                #f = np.vectorize(f)
+
+                #std = np.std(self.recording)
+                #self.recording[abs(self.recording) < std] = 0
+
+                '''
+                plt.plot(self.recording)
+                plt.plot(np.std(self.recording)*np.ones(self.recording.shape))
+                plt.plot(-np.std(self.recording)*np.ones(self.recording.shape))
+                plt.show()
+                '''
+                
+
                 sd.stop()
                 sd.play(self.recording,loop=True)
 
         elif val == 'm':
             print 'Starting tone...'
-            pitch = 440 # Hz
+            pitch = 440 # hz
             myarray = np.sin(2*np.pi*pitch*np.arange(int(1.0*self.samplerate))/self.samplerate)
             sd.play(myarray)
         else:
