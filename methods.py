@@ -70,7 +70,7 @@ class Sampler:
 
         for phrase in xrange(100): # set with variable
 
-            condition = True #phrase < layers
+            condition = phrase < layers
 
             # Catch layers...
             if condition:
