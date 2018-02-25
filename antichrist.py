@@ -14,9 +14,11 @@ from methods import *
 
 
 settings = {
-        'bpm':120,
-        'measures':8,
-        'layers':2
+        'bpm':140,
+        'measures':2,
+        'layers':3,
+        'samplerate':44100,
+        'cannon':False
         }
 
 sample = Sampler(settings)

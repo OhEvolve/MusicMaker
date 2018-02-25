@@ -6,6 +6,7 @@ import termios, fcntl, sys, os
 import argparse
 import logging
 import time
+import pickle
 
 # nonstandard libraries
 import sounddevice as sd
@@ -14,7 +15,7 @@ import matplotlib.pyplot as plt
 from scipy import signal
 
 # library modifications
-
+sys.setcheckinterval(1)
 
 ############################
 # -- command line catch -- #
@@ -36,7 +37,8 @@ class Sampler:
                 'layers':2,
                 # recording settings
                 'samplerate':44100,
-                'channels':1
+                'channels':1,
+                'cannon':False
                 }
         
         # update settings
@@ -54,6 +56,7 @@ class Sampler:
         layers = self.settings['layers']
         samplerate = self.settings['samplerate']
         channels = self.settings['channels']
+        cannon = self.settings['cannon']
 
         # precalculate useful values
         entrysize = samplerate*measures*ts[0]*(60./bpm)
@@ -63,14 +66,20 @@ class Sampler:
             print 'Down measure {}/{}...'.format(b,ts[0])
             time.sleep(60./bpm)
 
-        self.recording = np.zeros((3,int(entrysize),channels))
+        self.recording = np.zeros((layers,int(entrysize),channels))
         #self.recording = []
 
         print 'Recording...'
 
         for phrase in xrange(100): # set with variable
 
-            condition = phrase < layers
+            # define condition for writing new layers of music
+            if cannon:
+                condition = True
+            else:
+                condition = phrase < layers
+
+            sd.stop()
 
             # Catch layers...
             if condition:
@@ -81,7 +90,8 @@ class Sampler:
                         channels=channels)
     
             else:
-                sd.play(np.sum(self.recording,axis=0),loop=False,blocking=False)
+                sd.play(np.sum(self.recording,axis=0),samplerate,
+                        loop=False,blocking=False)
 
             for m in xrange(1,measures+1):
 
@@ -95,28 +105,19 @@ class Sampler:
 
             if condition:
 
-                filtered_recording = butter_highpass_filter(temp_recording,200,samplerate)
+                pickle.dump(temp_recording,open('data.p','wb'))
+                #filtered_recording = butter_highpass_filter(temp_recording,5,samplerate)
+                filtered_recording = my_filter(temp_recording)
+                self.recording[phrase%layers,:,:] = filtered_recording 
+                    
+                #plt.plot(filtered_recording)
+                #plt.show()
 
-
-                self.recording[phrase%3,:,:] = filtered_recording 
-
-            '''
-            if phrase == layers:
-                plt.subplot(221)
-                plt.plot(self.recording[0,:,:])
-                plt.subplot(222)
-                plt.plot(self.recording[1,:,:])
-                plt.subplot(223)
-                plt.plot(self.recording[2,:,:])
-                plt.subplot(224)
-                plt.plot(np.sum(self.recording[:,:,:],axis=0))
-                plt.show()
-            '''
         print 'End recording.'
 
 
         # play looped track
-        sd.play(self.recording,loop=True,blocking=False)
+        #sd.play(self.recording,loop=False,blocking=False)
 
         for m in xrange(1,measures+1):
             print 'Measure {}/{}...'.format(m,measures)
@@ -153,6 +154,7 @@ def callback(indata, outdata, frames, time, status):
 ############################
 
 # main testing function
+"""#
 class main():
 
     def __init__(self,args):
@@ -192,7 +194,7 @@ class main():
             fcntl.fcntl(fd, fcntl.f_setfl, oldflags)
 
     def interpret(self,val):
-        """ interprets user protocols """
+        "" interprets user protocols ""
         if val == 'q':
             print 'exiting...'
             self.exit = true
@@ -239,9 +241,23 @@ class main():
             sd.play(myarray)
         else:
             print "got character <{}>".format(val)
+"""#
 
 def clear_screen():
     os.system('clear')
+
+def my_filter(data):
+
+    # data load
+    final_shape = data.shape
+    data = np.array(data).flatten()
+    N = len(data)
+    # fft 
+    data_fft = np.fft.fft(data)
+    data_fft_mod = [d if 2*abs(i - N/2) < 0.99*N else 0.0 for i,d in enumerate(data_fft)]
+    data_mod = np.real(np.fft.ifft(data_fft_mod))
+
+    return np.reshape(data_mod,final_shape)
 
 def butter_highpass(cutoff, fs, order=20):
     nyq = 0.5 * fs
@@ -257,6 +273,7 @@ def butter_highpass_filter(data, cutoff, fs, order=5):
 if __name__ == "__main__":
     args = get_args()
     main = main(args)
+
 
 
 
