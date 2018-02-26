@@ -56,7 +56,7 @@ class Sampler:
         layers = self.settings['layers']
         samplerate = self.settings['samplerate']
         channels = self.settings['channels']
-        cannon = self.settings['cannon']
+        cannon = self.settings['cannon']          # boolean
 
         # precalculate useful values
         entrysize = samplerate*measures*ts[0]*(60./bpm)
@@ -67,7 +67,6 @@ class Sampler:
             time.sleep(60./bpm)
 
         self.recording = np.zeros((layers,int(entrysize),channels))
-        #self.recording = []
 
         print 'Recording...'
 
